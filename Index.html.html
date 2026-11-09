@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b0e14">
+<title>SportPredict Pro</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+body{font-family:Inter,sans-serif;background:#0b0e14;color:#f3f4f6}
+.panel{background:rgba(18,24,38,.88);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(12px)}
+.card{background:rgba(26,34,52,.7);border:1px solid rgba(255,255,255,.07)}
+.card:hover{border-color:rgba(16,185,129,.45)}
+.tab.active{background:#10b981;color:#07130f}
+input,select{color-scheme:dark}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:#263247;border-radius:8px}
+</style>
+</head>
+<body class="min-h-screen">
+<div class="bg-slate-950 border-b border-slate-800 px-4 py-2 text-xs text-slate-400">
+ <div class="max-w-7xl mx-auto flex justify-between gap-3"><span class="text-emerald-400 font-bold">● SPORTPREDICT PRO</span><span id="status">Modalità demo · API non configurata</span></div>
+</div>
+<header class="sticky top-0 z-30 panel border-b border-slate-800">
+ <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+  <div><div class="text-xl font-extrabold tracking-tight">SPORT<span class="text-emerald-400">PREDICT</span></div><div class="text-[10px] text-slate-400 tracking-widest">ANALISI SPORTIVA</div></div>
+  <div class="flex gap-2">
+   <button id="apiBtn" class="rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold">🔑 API Key</button>
+   <button id="cartBtn" class="rounded-lg bg-emerald-500 text-slate-950 px-3 py-2 text-xs font-bold">Schedina <span id="cartCount">0</span></button>
+  </div>
+ </div>
+</header>
+<main class="max-w-7xl mx-auto px-4 py-6">
+ <section class="panel rounded-2xl p-4 sm:p-5 mb-6">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+   <div><h1 class="font-bold text-lg">Palinsesto sportivo</h1><p class="text-xs text-slate-400 mt-1">Seleziona sport e campionato per consultare gli eventi disponibili.</p></div>
+   <div class="flex gap-2"><button id="refresh" class="bg-slate-800 rounded-lg px-3 py-2 text-xs">↻ Aggiorna</button><button id="allSports" class="bg-emerald-500 text-slate-950 rounded-lg px-3 py-2 text-xs font-bold">Tutti gli sport</button></div>
+  </div>
+  <div class="mt-4 flex flex-wrap gap-2" id="sportTabs">
+   <button class="tab active rounded-lg px-3 py-2 text-xs font-bold" data-sport="all">Tutti</button>
+   <button class="tab rounded-lg bg-slate-800 px-3 py-2 text-xs" data-sport="soccer">⚽ Calcio</button>
+   <button class="tab rounded-lg bg-slate-800 px-3 py-2 text-xs" data-sport="basketball">🏀 Basket</button>
+   <button class="tab rounded-lg bg-slate-800 px-3 py-2 text-xs" data-sport="tennis">🎾 Tennis</button>
+  </div>
+  <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+   <label class="text-xs text-slate-400">Campionato
+    <select id="league" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-white">
+     <option value="all">Tutti i campionati</option>
+    </select>
+   </label>
+   <label class="text-xs text-slate-400">Mercato quote
+    <select id="market" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-white">
+     <option value="h2h">Vincente / 1X2</option><option value="totals">Over / Under</option><option value="spreads">Handicap</option>
+    </select>
+   </label>
+  </div>
+ </section>
+ <section class="mb-6">
+  <div class="flex items-center justify-between mb-3"><h2 class="font-extrabold">Eventi disponibili</h2><span id="eventCount" class="text-xs text-slate-400">0 eventi</span></div>
+  <div id="events" class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+   <div class="panel rounded-xl p-5 text-sm text-slate-400">Inserisci una API Key valida oppure consulta la modalità demo.</div>
+  </div>
+ </section>
+ <section class="panel rounded-2xl p-4 mb-6">
+  <h2 class="font-bold mb-2">Come leggere le informazioni</h2>
+  <p class="text-xs leading-5 text-slate-400">Le quote sono valori pubblicati dai bookmaker tramite il provider dati, quando disponibili. La scheda di lettura evidenzia la quota più bassa e la relativa probabilità implicita grezza (1/quota). Non è un pronostico certo, non integra statistiche di forma o infortuni e non considera il margine del bookmaker. Le competizioni effettivamente disponibili dipendono dal piano API. Controlla sempre orario, mercato e bookmaker.</p>
+ </section>
+</main>
+<div id="cart" class="hidden fixed inset-0 z-50 bg-black/70">
+ <div class="absolute right-0 top-0 h-full w-full max-w-md bg-slate-900 border-l border-slate-700 p-4 flex flex-col">
+  <div class="flex justify-between items-center"><h2 class="font-bold text-lg">La tua schedina</h2><button id="closeCart" class="text-slate-400 text-xl">×</button></div>
+  <div id="cartItems" class="flex-1 overflow-auto py-4 space-y-2"></div>
+  <div class="border-t border-slate-700 pt-4 space-y-3">
+   <div class="flex justify-between text-sm"><span class="text-slate-400">Quota totale</span><b id="totalOdds">1.00</b></div>
+   <label class="text-xs text-slate-400">Importo indicativo (€)<input id="stake" type="number" min="0" step="0.50" value="5" class="block w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"></label>
+   <div class="flex justify-between font-bold"><span>Ritorno potenziale</span><span id="return" class="text-emerald-400">5,00 €</span></div>
+   <button id="clearCart" class="w-full bg-slate-800 rounded-lg p-2 text-xs">Svuota schedina</button>
+  </div>
+ </div>
+</div>
+<div id="apiModal" class="hidden fixed inset-0 z-50 bg-black/75 p-4 flex items-center justify-center">
+ <div class="panel rounded-2xl p-5 w-full max-w-md">
+  <div class="flex justify-between items-center mb-3"><h2 class="font-bold">Configura The Odds API</h2><button id="closeApi" class="text-slate-400 text-xl">×</button></div>
+  <p class="text-xs text-slate-400 mb-3">La chiave viene salvata solo nel browser su questo dispositivo. Per un sito pubblico è preferibile usare un backend: non pubblicare mai una chiave privata nel codice.</p>
+  <input id="apiKey" type="password" autocomplete="off" placeholder="Incolla API Key" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm">
+  <div class="flex gap-2 mt-3"><button id="saveApi" class="flex-1 bg-emerald-500 text-slate-950 rounded-lg p-2 text-sm font-bold">Salva e carica</button><button id="removeApi" class="bg-slate-800 rounded-lg p-2 text-sm">Rimuovi</button></div>
+ </div>
+</div>
+<footer class="border-t border-slate-800 bg-slate-950 text-center text-[11px] text-slate-500 p-5">SportPredict Pro · Solo analisi informativa · Gioco vietato ai minori di 18 anni. Gioca responsabilmente.</footer>
+<script>
+const LEAGUES = [
+ ['soccer','soccer_italy_serie_a','Serie A'],['soccer','soccer_italy_serie_b','Serie B'],['soccer','soccer_epl','Premier League'],['soccer','soccer_england_championship','Championship'],['soccer','soccer_spain_la_liga','La Liga'],['soccer','soccer_germany_bundesliga','Bundesliga'],['soccer','soccer_france_ligue_one','Ligue 1'],['soccer','soccer_netherlands_eredivisie','Eredivisie'],['soccer','soccer_portugal_primeira_liga','Primeira Liga'],['soccer','soccer_uefa_champs_league','Champions League'],['soccer','soccer_uefa_europa_league','Europa League'],['soccer','soccer_uefa_europa_conference_league','Conference League'],['soccer','soccer_usa_mls','MLS'],['soccer','soccer_brazil_campeonato','Brasileirão'],['soccer','soccer_argentina_primera_division','Primera División Argentina'],
+ ['soccer','soccer_italy_serie_c','Serie C (se disponibile)'],['soccer','soccer_spain_segunda_division','LaLiga 2 (se disponibile)'],['soccer','soccer_germany_bundesliga2','2. Bundesliga (se disponibile)'],['soccer','soccer_france_ligue_two','Ligue 2 (se disponibile)'],['soccer','soccer_scotland_premiership','Scottish Premiership'],['soccer','soccer_turkey_super_league','Super Lig turca'],['soccer','soccer_australia_aleague','A-League'],['soccer','soccer_japan_j_league','J-League'],['soccer','soccer_mexico_ligamx','Liga MX'],['soccer','soccer_uefa_nations_league','Nations League'],
+ ['basketball','basketball_nba','NBA'],['basketball','basketball_euroleague','EuroLeague'],['basketball','basketball_ncaab','NCAA Basketball'],['basketball','basketball_wnba','WNBA'],['basketball','basketball_nbl','NBL Australia'],
+ ['tennis','tennis_atp','ATP'],['tennis','tennis_wta','WTA'],['tennis','tennis_atp_challenger','ATP Challenger']
+];
+let apiKey=localStorage.getItem('SP_ODDS_KEY')||'', sportFilter='all', events=[], selections=[];
+const $=id=>document.getElementById(id);
+function fillLeagues(){ $('league').innerHTML='<option value="all">Tutti i campionati</option>'+LEAGUES.filter(x=>sportFilter==='all'||x[0]===sportFilter).map(x=>`<option value="${x[1]}">${x[2]}</option>`).join('');}
+function leagueName(key){return LEAGUES.find(x=>x[1]===key)?.[2]||key;}
+function setStatus(s){$('status').textContent=s;}
+function getMarket(game){const book=game.bookmakers?.[0];return book?.markets?.find(m=>m.key===$('market').value);}
+function analysisMarkup(outcomes){
+ if(!outcomes || outcomes.length<2) return '';
+ const sorted=[...outcomes].filter(o=>Number(o.price)>1).sort((a,b)=>a.price-b.price);
+ if(!sorted.length) return '';
+ const fav=sorted[0], probability=(100/Number(fav.price));
+ return `<div class="rounded-lg bg-emerald-500/5 border border-emerald-500/20 p-3 mb-3"><div class="text-[10px] uppercase tracking-wide text-emerald-300 font-bold mb-1">Lettura quote · indicazione statistica</div><div class="text-xs text-slate-300">Quota più bassa: <b class="text-white">${fav.name}</b> (${Number(fav.price).toFixed(2)}). Probabilità implicita grezza: <b class="text-emerald-300">${probability.toFixed(1)}%</b>.</div><div class="text-[10px] text-slate-500 mt-1">Stima matematica ricavata dalla quota, non previsione certa; non considera il margine del bookmaker.</div></div>`;
+}
+function renderEvents(){
+ const chosen=$('league').value;
+ const list=events.filter(e=>chosen==='all'||e.sport_key===chosen);
+ $('eventCount').textContent=`${list.length} eventi`;
+ if(!list.length){$('events').innerHTML='<div class="panel rounded-xl p-5 text-sm text-slate-400">Nessun evento disponibile per il filtro selezionato. Prova un altro campionato o aggiorna il palinsesto.</div>';return;}
+ $('events').innerHTML=list.map(game=>{
+  const market=getMarket(game), book=game.bookmakers?.[0];
+  const outcomes=market?.outcomes||[];
+  const odds=outcomes.map(o=>`<button class="odd bg-slate-950 hover:bg-emerald-500/20 border border-slate-700 rounded-lg p-2 text-left" data-game="${game.id}" data-name="${o.name.replaceAll('"','&quot;')}" data-price="${o.price}" data-point="${o.point??''}"><span class="block text-[10px] text-slate-400">${o.name}${o.point!==undefined?' '+o.point:''}</span><b class="text-emerald-400">${Number(o.price).toFixed(2)}</b></button>`).join('');
+  const date=new Date(game.commence_time).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'});
+  return `<article class="card rounded-xl p-4"><div class="flex justify-between gap-2 text-[10px] text-slate-400 mb-3"><span>${leagueName(game.sport_key)}</span><span>${date}</span></div><div class="font-bold text-sm mb-3">${game.home_team} <span class="text-slate-500">vs</span> ${game.away_team}</div>${analysisMarkup(outcomes)}<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">${odds||'<p class="text-xs text-slate-500 col-span-3">Quote non disponibili per questo mercato.</p>'}</div><div class="mt-3 text-[10px] text-slate-500">Fonte quote: ${book?.title||'non disponibile'}</div></article>`;
+ }).join('');
+ document.querySelectorAll('.odd').forEach(btn=>btn.addEventListener('click',()=>addSelection(btn)));
+}
+function addSelection(btn){
+ const game=events.find(e=>e.id===btn.dataset.game);if(!game)return;
+ const name=btn.dataset.name, price=Number(btn.dataset.price), point=btn.dataset.point;
+ const key=[game.id,name,point].join('|');
+ if(selections.some(s=>s.key===key)){selections=selections.filter(s=>s.key!==key);}else{selections.push({key,game:game.home_team+' vs '+game.away_team,name,price,league:leagueName(game.sport_key)});}
+ renderCart();
+}
+function renderCart(){
+ $('cartCount').textContent=selections.length;
+ $('cartItems').innerHTML=selections.length?selections.map(s=>`<div class="bg-slate-800 rounded-lg p-3 flex justify-between gap-3"><div><div class="text-xs font-semibold">${s.game}</div><div class="text-[11px] text-slate-400">${s.name} · ${s.league}</div></div><div class="text-right"><b class="text-emerald-400">${s.price.toFixed(2)}</b><button class="block text-[10px] text-red-400 ml-auto" data-remove="${s.key}">Rimuovi</button></div></div>`).join(''):'<p class="text-sm text-slate-500 text-center mt-10">La schedina è vuota.</p>';
+ $('cartItems').querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{selections=selections.filter(s=>s.key!==b.dataset.remove);renderCart();});
+ const total=selections.reduce((a,s)=>a*s.price,1), stake=Math.max(0,Number($('stake').value)||0);
+ $('totalOdds').textContent=total.toFixed(2);$('return').textContent=(total*stake).toLocaleString('it-IT',{style:'currency',currency:'EUR'});
+}
+async function loadOdds(){
+ if(!apiKey){setStatus('Modalità demo · API non configurata');$('events').innerHTML='<div class="panel rounded-xl p-5 text-sm text-slate-400 col-span-full">Per caricare quote ed eventi reali, configura la tua API Key. La copertura dei campionati dipende dal piano e dalla disponibilità del provider.</div>';return;}
+ const keys=( $('league').value==='all'?LEAGUES.filter(x=>sportFilter==='all'||x[0]===sportFilter):LEAGUES.filter(x=>x[1]===$('league').value)).map(x=>x[1]);
+ setStatus('Aggiornamento in corso…');$('events').innerHTML='<div class="panel rounded-xl p-5 text-sm text-slate-400 col-span-full">Caricamento eventi…</div>';
+ const results=await Promise.allSettled(keys.map(async key=>{
+  const url=`https://api.the-odds-api.com/v4/sports/${key}/odds/?apiKey=${encodeURIComponent(apiKey)}&regions=eu&markets=${encodeURIComponent($('market').value)}&oddsFormat=decimal`;
+  const res=await fetch(url);if(!res.ok)throw new Error(`${key}: HTTP ${res.status}`);
+  return await res.json();
+ }));
+ events=results.filter(r=>r.status==='fulfilled').flatMap(r=>r.value);
+ const failed=results.filter(r=>r.status==='rejected').length;
+ setStatus(`${events.length} eventi caricati${failed?` · ${failed} campionati non disponibili`:''}`);
+ if(failed) console.info(`${failed} sport key non disponibili per il provider/piano API`);
+ renderEvents();
+}
+$('sportTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{sportFilter=b.dataset.sport;$('sportTabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));fillLeagues();loadOdds();});
+$('allSports').onclick=()=>{$('sportTabs').querySelector('[data-sport="all"]').click();};
+$('league').onchange=loadOdds;$('market').onchange=loadOdds;$('refresh').onclick=loadOdds;
+$('apiBtn').onclick=()=>{$('apiKey').value=apiKey;$('apiModal').classList.remove('hidden');};
+$('closeApi').onclick=()=>$('apiModal').classList.add('hidden');
+$('saveApi').onclick=()=>{apiKey=$('apiKey').value.trim();if(!apiKey)return;localStorage.setItem('SP_ODDS_KEY',apiKey);$('apiModal').classList.add('hidden');loadOdds();};
+$('removeApi').onclick=()=>{apiKey='';localStorage.removeItem('SP_ODDS_KEY');$('apiModal').classList.add('hidden');loadOdds();};
+$('cartBtn').onclick=()=>$('cart').classList.remove('hidden');$('closeCart').onclick=()=>$('cart').classList.add('hidden');
+$('clearCart').onclick=()=>{selections=[];renderCart();};$('stake').oninput=renderCart;
+fillLeagues();renderCart();loadOdds();
+</script>
+</body>
+</html>
